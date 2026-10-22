@@ -140,23 +140,26 @@ WITH checks(seq, check_name, expected, comparison, actual) AS (
     -- key when no constraint with that name exists yet, so a pre-existing
     -- constraint can keep its own action. The cleanup code must not assume
     -- CASCADE: check the declared actions (c = cascade, n = set null,
-    -- r = restrict) instead of trusting the names.
+    -- r = restrict, a = no action) instead of trusting the names.
+    -- For the three constraints meant to block deletes (to_agent_id,
+    -- agent_memories.agent_id, agent_memory_summaries.agent_id) NO ACTION
+    -- and RESTRICT behave the same for these deletes, so either is accepted;
+    -- CASCADE and SET NULL stay exact.
     UNION ALL
-    SELECT 18, 'foreign key delete actions (c,c,n,r,r,n,r)', '7', '=', count(*)::bigint
+    SELECT 18, 'foreign key delete actions (c,c,n,r|a,r|a,n,r|a)', '7', '=', count(*)::bigint
       FROM (VALUES
-            ('memory_provenance_memory_id_fkey', 'c'),
-            ('memory_provenance_parent_memory_id_fkey', 'c'),
-            ('memory_provenance_from_agent_id_fkey', 'n'),
-            ('memory_provenance_to_agent_id_fkey', 'r'),
-            ('agent_memories_agent_id_fkey', 'r'),
-            ('agent_memories_source_agent_id_fkey', 'n'),
-            ('agent_memory_summaries_agent_id_fkey', 'r')
-           ) AS expected(constraint_name, delete_action)
+            ('memory_provenance_memory_id_fkey',        ARRAY['c']),
+            ('memory_provenance_parent_memory_id_fkey', ARRAY['c']),
+            ('memory_provenance_from_agent_id_fkey',    ARRAY['n']),
+            ('memory_provenance_to_agent_id_fkey',      ARRAY['r', 'a']),
+            ('agent_memories_agent_id_fkey',            ARRAY['r', 'a']),
+            ('agent_memory_summaries_agent_id_fkey',    ARRAY['r', 'a'])
+           ) AS expected(constraint_name, delete_actions)
       JOIN pg_constraint c
         ON c.conname = expected.constraint_name
        AND c.connamespace = 'public'::regnamespace
        AND c.contype = 'f'
-       AND c.confdeltype::text = expected.delete_action
+       AND c.confdeltype::text = ANY (expected.delete_actions)
 )
 SELECT check_name,
        expected,
