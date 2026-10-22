@@ -50,7 +50,7 @@ def test_enable_utf8_console_allows_non_ascii_output() -> None:
         stream.write("Price: \u20b955,000")
         stream.flush()
 
-        assert "55,000" in stream.getvalue()
+        assert "55,000" in stream.buffer.getvalue().decode("utf-8")
     finally:
         stream.detach()
 
