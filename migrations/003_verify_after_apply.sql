@@ -153,6 +153,7 @@ WITH checks(seq, check_name, expected, comparison, actual) AS (
             ('memory_provenance_from_agent_id_fkey',    ARRAY['n']),
             ('memory_provenance_to_agent_id_fkey',      ARRAY['r', 'a']),
             ('agent_memories_agent_id_fkey',            ARRAY['r', 'a']),
+            ('agent_memories_source_agent_id_fkey',     ARRAY['n']),
             ('agent_memory_summaries_agent_id_fkey',    ARRAY['r', 'a'])
            ) AS expected(constraint_name, delete_actions)
       JOIN pg_constraint c
