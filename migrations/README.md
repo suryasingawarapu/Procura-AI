@@ -9,6 +9,7 @@ project must not run migrations without an explicit approval.
 | `001_harden_schema.sql` | Agent registry, sharing policy, new columns, foreign keys, constraints, one-active-version index, `updated_at` trigger | no |
 | `002_memory_functions.sql` | The six atomic SQL functions + a self-test | no |
 | `003_verify_after_apply.sql` | Read-only verification queries | no |
+| `004_fix_parent_memory_id_fkey.sql` | Recreates `memory_provenance.parent_memory_id` with `ON DELETE CASCADE`; apply before `003` | no |
 | `ROLLBACK.sql` | Undoes 001 and 002 | **yes** |
 
 ## How to apply
@@ -16,7 +17,7 @@ project must not run migrations without an explicit approval.
 1. Supabase dashboard -> **SQL Editor** -> new query.
 2. Paste the **whole** file and run it. It is one transaction: if any
    statement fails, nothing is applied.
-3. Repeat for the next file, in order.
+3. Repeat for the next file, in order: `001`, `002`, then `004`.
 4. Run `003_verify_after_apply.sql`. It returns one row per check
    (`check_name | expected | actual | comparison | status`); every row has to
    say `OK`.
@@ -61,6 +62,7 @@ fails, the entire migration is rolled back and the error is reported.
 ## Safety
 
 * `001` is additive: no table or column is dropped and no row is deleted.
+* `004` only replaces one foreign key definition; it drops no rows or columns.
 * Duplicated *active* rows (if any exist) are superseded, never deleted, and
   the supersession is recorded in `memory_provenance`.
 * `001` aborts with a descriptive message if the current data would violate

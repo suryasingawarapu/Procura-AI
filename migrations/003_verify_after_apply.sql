@@ -136,31 +136,37 @@ WITH checks(seq, check_name, expected, comparison, actual) AS (
     SELECT 17, 'agent_memory_summaries rows', '0', '=', count(*)::bigint
       FROM agent_memory_summaries
 
-    -- 11. the delete actions of the foreign keys. 001 only creates a foreign
-    -- key when no constraint with that name exists yet, so a pre-existing
-    -- constraint can keep its own action. The cleanup code must not assume
-    -- CASCADE: check the declared actions (c = cascade, n = set null,
-    -- r = restrict, a = no action) instead of trusting the names.
-    -- For the three constraints meant to block deletes (to_agent_id,
-    -- agent_memories.agent_id, agent_memory_summaries.agent_id) NO ACTION
-    -- and RESTRICT behave the same for these deletes, so either is accepted;
-    -- CASCADE and SET NULL stay exact.
+    -- 11. the delete actions of the foreign keys. 001 keeps a constraint
+    -- that already exists instead of recreating it, so neither the name nor
+    -- a fixed list of names is a reliable key: a constraint name is only
+    -- unique per table. Match each intended foreign key by the table and
+    -- column it protects, then validate the action on the constraint that is
+    -- really there (c = cascade, n = set null, r = restrict, a = no action).
+    -- NO ACTION and RESTRICT block the same deletes, so either is accepted
+    -- for the three blocking constraints; CASCADE and SET NULL stay exact.
     UNION ALL
     SELECT 18, 'foreign key delete actions (c,c,n,r|a,r|a,n,r|a)', '7', '=', count(*)::bigint
       FROM (VALUES
-            ('memory_provenance_memory_id_fkey',        ARRAY['c']),
-            ('memory_provenance_parent_memory_id_fkey', ARRAY['c']),
-            ('memory_provenance_from_agent_id_fkey',    ARRAY['n']),
-            ('memory_provenance_to_agent_id_fkey',      ARRAY['r', 'a']),
-            ('agent_memories_agent_id_fkey',            ARRAY['r', 'a']),
-            ('agent_memories_source_agent_id_fkey',     ARRAY['n']),
-            ('agent_memory_summaries_agent_id_fkey',    ARRAY['r', 'a'])
-           ) AS expected(constraint_name, delete_actions)
-      JOIN pg_constraint c
-        ON c.conname = expected.constraint_name
-       AND c.connamespace = 'public'::regnamespace
-       AND c.contype = 'f'
-       AND c.confdeltype::text = ANY (expected.delete_actions)
+            ('memory_provenance', 'memory_id',        ARRAY['c']),
+            ('memory_provenance', 'parent_memory_id', ARRAY['c']),
+            ('memory_provenance', 'from_agent_id',    ARRAY['n']),
+            ('memory_provenance', 'to_agent_id',      ARRAY['r', 'a']),
+            ('agent_memories',    'agent_id',         ARRAY['r', 'a']),
+            ('agent_memories',    'source_agent_id',  ARRAY['n']),
+            ('agent_memory_summaries', 'agent_id',    ARRAY['r', 'a'])
+           ) AS expected(table_name, column_name, delete_actions)
+     WHERE EXISTS (
+             SELECT 1
+               FROM pg_constraint c
+               JOIN pg_attribute a
+                 ON a.attrelid = c.conrelid
+                AND a.attnum = ANY (c.conkey)
+                AND NOT a.attisdropped
+              WHERE c.conrelid = to_regclass('public.' || expected.table_name)
+                AND c.contype = 'f'
+                AND a.attname = expected.column_name
+                AND c.confdeltype::text = ANY (expected.delete_actions)
+           )
 )
 SELECT check_name,
        expected,
