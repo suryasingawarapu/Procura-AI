@@ -5,14 +5,16 @@ This test *writes* to the database and is therefore opt-in:
     $env:MEMORY_ALLOW_WRITE = "1"
     .\\.venv\\Scripts\\python.exe -m pytest -m dbwrite -v
 
-It registers its own throwaway agents, exercises the full write path and
-removes everything it created again. It is skipped while the M1 migrations
-are not applied.
+Every run registers its own throwaway agents (the run id keeps the identity
+unique) and every test uses a fresh memory key, so neither an earlier run nor
+an earlier test can change what these tests observe. Teardown deletes the
+provenance edges first, then the memories, the policy row and the agents.
 """
 
 from __future__ import annotations
 
 import os
+import uuid
 
 import pytest
 
@@ -21,9 +23,10 @@ from app.memory.propagation import get_ancestry, get_descendants, share_memory
 from app.memory.store import save_memory
 from app.memory.versioning import update_memory
 
-SOURCE_AGENT = "pytest_source"
-TARGET_AGENT = "pytest_target"
-MEMORY_KEY = "pytest_key"
+RUN_ID = uuid.uuid4().hex[:10]
+SOURCE_AGENT = f"pytest_source_{RUN_ID}"
+TARGET_AGENT = f"pytest_target_{RUN_ID}"
+AGENTS = (SOURCE_AGENT, TARGET_AGENT)
 
 pytestmark = [
     pytest.mark.dbwrite,
@@ -35,10 +38,48 @@ pytestmark = [
 ]
 
 
+def _delete_test_data(client) -> None:
+    """Remove only the rows owned by this test run, in dependency order."""
+    memory_ids = [
+        row["id"]
+        for row in client.table("agent_memories")
+        .select("id")
+        .in_("agent_id", list(AGENTS))
+        .execute()
+        .data
+    ]
+
+    if memory_ids:
+        for column in ("memory_id", "parent_memory_id"):
+            client.table("memory_provenance").delete().in_(
+                column, memory_ids
+            ).execute()
+
+    for column in ("from_agent_id", "to_agent_id"):
+        client.table("memory_provenance").delete().in_(
+            column, list(AGENTS)
+        ).execute()
+
+    client.table("agent_memories").delete().in_(
+        "agent_id", list(AGENTS)
+    ).execute()
+
+    for column in ("from_agent_id", "to_agent_id"):
+        client.table("memory_share_policy").delete().in_(
+            column, list(AGENTS)
+        ).execute()
+
+    client.table("memory_agents").delete().in_(
+        "agent_id", list(AGENTS)
+    ).execute()
+
+
 @pytest.fixture
 def registered_agents(supabase_client):
     """Register the throwaway agents and remove them afterwards."""
-    for agent_id in (SOURCE_AGENT, TARGET_AGENT):
+    _delete_test_data(supabase_client)
+
+    for agent_id in AGENTS:
         supabase_client.table("memory_agents").upsert(
             {"agent_id": agent_id, "role": "agent"},
             on_conflict="agent_id",
@@ -56,32 +97,34 @@ def registered_agents(supabase_client):
 
     yield
 
-    supabase_client.table("agent_memories").delete().in_(
-        "agent_id", [SOURCE_AGENT, TARGET_AGENT]
-    ).execute()
-    supabase_client.table("memory_share_policy").delete().in_(
-        "from_agent_id", [SOURCE_AGENT]
-    ).execute()
-    supabase_client.table("memory_agents").delete().in_(
-        "agent_id", [SOURCE_AGENT, TARGET_AGENT]
-    ).execute()
+    _delete_test_data(supabase_client)
 
 
-def test_save_is_atomic_and_idempotent(supabase_client, registered_agents) -> None:
-    first = save_memory(SOURCE_AGENT, MEMORY_KEY, "first content")
+@pytest.fixture
+def memory_key() -> str:
+    """A memory key that no other test or run can have used."""
+    return f"pytest_key_{uuid.uuid4().hex[:12]}"
+
+
+def test_save_is_atomic_and_idempotent(
+    supabase_client, registered_agents, memory_key
+) -> None:
+    first = save_memory(SOURCE_AGENT, memory_key, "first content")
     assert first["version"] == 1
     assert first["status"] == "active"
 
-    again = save_memory(SOURCE_AGENT, MEMORY_KEY, "first content")
+    again = save_memory(SOURCE_AGENT, memory_key, "first content")
     assert again["id"] == first["id"], "saving the same content must not create a new version"
     assert again["version"] == 1
 
 
-def test_changed_content_supersedes_in_one_step(supabase_client, registered_agents) -> None:
-    first = save_memory(SOURCE_AGENT, MEMORY_KEY, "first content")
-    second = save_memory(SOURCE_AGENT, MEMORY_KEY, "second content")
+def test_changed_content_supersedes_in_one_step(
+    supabase_client, registered_agents, memory_key
+) -> None:
+    first = save_memory(SOURCE_AGENT, memory_key, "first content")
+    second = save_memory(SOURCE_AGENT, memory_key, "second content")
 
-    assert second["version"] == 2
+    assert second["version"] == first["version"] + 1
     assert second["id"] != first["id"]
 
     old = (
@@ -106,22 +149,28 @@ def test_changed_content_supersedes_in_one_step(supabase_client, registered_agen
     assert len(edge) == 1, "the supersedes edge is missing"
 
 
-def test_update_creates_the_next_version(supabase_client, registered_agents) -> None:
-    save_memory(SOURCE_AGENT, MEMORY_KEY, "first content")
+def test_update_creates_the_next_version(
+    supabase_client, registered_agents, memory_key
+) -> None:
+    first = save_memory(SOURCE_AGENT, memory_key, "first content")
 
-    updated = update_memory(SOURCE_AGENT, MEMORY_KEY, "second content")
+    updated = update_memory(SOURCE_AGENT, memory_key, "second content")
 
-    assert updated["version"] == 2
+    assert updated["version"] == first["version"] + 1
     assert updated["status"] == "active"
 
 
-def test_update_of_an_unknown_key_is_reported(supabase_client, registered_agents) -> None:
+def test_update_of_an_unknown_key_is_reported(
+    supabase_client, registered_agents, memory_key
+) -> None:
     with pytest.raises(errors.MemoryNotFound):
-        update_memory(SOURCE_AGENT, "does-not-exist", "content")
+        update_memory(SOURCE_AGENT, memory_key, "content")
 
 
-def test_share_creates_a_copy_with_provenance(supabase_client, registered_agents) -> None:
-    source = save_memory(SOURCE_AGENT, MEMORY_KEY, "shared content")
+def test_share_creates_a_copy_with_provenance(
+    supabase_client, registered_agents, memory_key
+) -> None:
+    source = save_memory(SOURCE_AGENT, memory_key, "shared content")
 
     copy = share_memory(source["id"], TARGET_AGENT)
 
@@ -142,8 +191,10 @@ def test_share_creates_a_copy_with_provenance(supabase_client, registered_agents
     assert len(edge) == 1, "the derived_from edge is missing"
 
 
-def test_sharing_twice_does_not_duplicate(supabase_client, registered_agents) -> None:
-    source = save_memory(SOURCE_AGENT, MEMORY_KEY, "shared content")
+def test_sharing_twice_does_not_duplicate(
+    supabase_client, registered_agents, memory_key
+) -> None:
+    source = save_memory(SOURCE_AGENT, memory_key, "shared content")
 
     first = share_memory(source["id"], TARGET_AGENT)
     second = share_memory(source["id"], TARGET_AGENT)
@@ -151,8 +202,10 @@ def test_sharing_twice_does_not_duplicate(supabase_client, registered_agents) ->
     assert first["id"] == second["id"]
 
 
-def test_sharing_an_unlisted_pair_is_denied(supabase_client, registered_agents) -> None:
-    source = save_memory(SOURCE_AGENT, MEMORY_KEY, "shared content")
+def test_sharing_an_unlisted_pair_is_denied(
+    supabase_client, registered_agents, memory_key
+) -> None:
+    source = save_memory(SOURCE_AGENT, memory_key, "shared content")
     copy = share_memory(source["id"], TARGET_AGENT)
 
     # the reverse direction has no policy row -> denied
@@ -164,8 +217,10 @@ def test_sharing_an_unlisted_pair_is_denied(supabase_client, registered_agents) 
         share_memory(source["id"], SOURCE_AGENT)
 
 
-def test_ancestry_and_descendants_are_multi_hop(supabase_client, registered_agents) -> None:
-    source = save_memory(SOURCE_AGENT, MEMORY_KEY, "shared content")
+def test_ancestry_and_descendants_are_multi_hop(
+    supabase_client, registered_agents, memory_key
+) -> None:
+    source = save_memory(SOURCE_AGENT, memory_key, "shared content")
     copy = share_memory(source["id"], TARGET_AGENT)
 
     ancestry = get_ancestry(copy["id"])
@@ -179,6 +234,8 @@ def test_ancestry_and_descendants_are_multi_hop(supabase_client, registered_agen
     assert descendants[1]["memory_id"] == copy["id"]
 
 
-def test_unregistered_agents_are_rejected(supabase_client) -> None:
+def test_unregistered_agents_are_rejected(supabase_client, memory_key) -> None:
+    unknown_agent = f"pytest_unknown_{uuid.uuid4().hex}"
+
     with pytest.raises(errors.AgentNotRegistered):
-        save_memory("pytest_unknown_agent", MEMORY_KEY, "content")
+        save_memory(unknown_agent, memory_key, "content")
