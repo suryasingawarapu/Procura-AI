@@ -135,6 +135,28 @@ WITH checks(seq, check_name, expected, comparison, actual) AS (
     UNION ALL
     SELECT 17, 'agent_memory_summaries rows', '0', '=', count(*)::bigint
       FROM agent_memory_summaries
+
+    -- 11. the delete actions of the foreign keys. 001 only creates a foreign
+    -- key when no constraint with that name exists yet, so a pre-existing
+    -- constraint can keep its own action. The cleanup code must not assume
+    -- CASCADE: check the declared actions (c = cascade, n = set null,
+    -- r = restrict) instead of trusting the names.
+    UNION ALL
+    SELECT 18, 'foreign key delete actions (c,c,n,r,r,n,r)', '7', '=', count(*)::bigint
+      FROM (VALUES
+            ('memory_provenance_memory_id_fkey', 'c'),
+            ('memory_provenance_parent_memory_id_fkey', 'c'),
+            ('memory_provenance_from_agent_id_fkey', 'n'),
+            ('memory_provenance_to_agent_id_fkey', 'r'),
+            ('agent_memories_agent_id_fkey', 'r'),
+            ('agent_memories_source_agent_id_fkey', 'n'),
+            ('agent_memory_summaries_agent_id_fkey', 'r')
+           ) AS expected(constraint_name, delete_action)
+      JOIN pg_constraint c
+        ON c.conname = expected.constraint_name
+       AND c.connamespace = 'public'::regnamespace
+       AND c.contype = 'f'
+       AND c.confdeltype::text = expected.delete_action
 )
 SELECT check_name,
        expected,
