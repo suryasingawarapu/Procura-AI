@@ -1,12 +1,8 @@
-"""Baseline snapshot of the known schema gaps (state before milestone M1).
+"""Gaps that are still open after milestone M1.
 
-These assertions intentionally encode the *current* state of the database so
-that an unexpected change is noticed. Each one has to be updated in the same
-change that closes the corresponding gap:
-
-* ``test_provenance_has_no_foreign_keys``  -> closed by M1 (FK + constraints)
-* ``test_no_sql_functions_are_exposed``    -> closed by M1 (RPC functions)
-* ``test_no_embeddings_are_populated``     -> closed by M3 (embedding generation)
+Milestone M1 hardens the schema and makes the writes atomic. Embeddings are
+still missing, so this file records what is still outstanding. Each test has
+to be removed or inverted in the change that closes the gap.
 """
 
 from __future__ import annotations
@@ -15,29 +11,8 @@ import pytest
 
 
 @pytest.mark.integration
-def test_provenance_has_no_foreign_keys(openapi_schema):
-    """Known gap: provenance rows can point at memories that do not exist."""
-    for table in ("agent_memories", "memory_provenance", "agent_memory_summaries"):
-        relationships = openapi_schema["definitions"][table].get("relationships", {})
-        assert not relationships, (
-            f"{table} now declares foreign keys; update this baseline and the "
-            "M1 checklist."
-        )
-
-
-@pytest.mark.integration
-def test_no_sql_functions_are_exposed(openapi_schema):
-    """Known gap: vector search and atomic writes have no SQL function yet."""
-    rpc_paths = [p for p in openapi_schema.get("paths", {}) if p.startswith("/rpc/")]
-    assert not rpc_paths, (
-        f"SQL functions are now exposed ({rpc_paths}); update this baseline "
-        "and the M1 checklist."
-    )
-
-
-@pytest.mark.integration
 def test_no_embeddings_are_populated(supabase_client):
-    """Known gap: every embedding column is still NULL."""
+    """Open gap: closed by M3 (embedding generation)."""
     for table in ("agent_memories", "agent_memory_summaries"):
         rows = (
             supabase_client.table(table)
@@ -48,3 +23,14 @@ def test_no_embeddings_are_populated(supabase_client):
             or []
         )
         assert not rows, f"{table} now contains embeddings; update this baseline."
+
+
+@pytest.mark.integration
+def test_summary_table_is_still_empty(supabase_client):
+    """Open gap: closed by M2/M3 (summary generation and summary-first reads)."""
+    response = supabase_client.table("agent_memory_summaries").select("id", count="exact").execute()
+    count = getattr(response, "count", None)
+    if count is None:
+        count = len(response.data or [])
+
+    assert count == 0, "summaries were created; update this baseline."

@@ -52,8 +52,16 @@ def openapi_schema() -> Dict[str, Any]:
 
 
 @pytest.fixture(autouse=True)
-def assert_no_writes(supabase_client):
-    """Fail the test if it changed the number of rows in any table."""
+def assert_no_writes(supabase_client, request):
+    """Fail the test if it changed the number of rows in any table.
+
+    Tests marked ``dbwrite`` are allowed to write; they are opt-in and clean
+    up after themselves.
+    """
+    if request.node.get_closest_marker("dbwrite") is not None:
+        yield
+        return
+
     before = {table: row_count(supabase_client, table) for table in TABLES}
 
     yield
