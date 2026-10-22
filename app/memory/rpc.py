@@ -28,6 +28,7 @@ _ERROR_MAP = {
     "MEM01": errors.AgentNotRegistered,
     "MEM02": errors.ShareNotAllowed,
     "MEM03": errors.HopLimitExceeded,
+    "MEM04": errors.DuplicateMemory,
     "MEM05": errors.SelfShareNotAllowed,
     "23503": errors.AgentNotRegistered,
     "23505": errors.DuplicateMemory,

@@ -22,6 +22,7 @@
 --   MEM01  agent is not registered
 --   MEM02  the share is not permitted by memory_share_policy
 --   MEM03  the hop limit would be exceeded
+--   MEM04  the target key already holds an unrelated memory
 --   MEM05  an agent tried to share a memory with itself
 --   P0002  no such (active) memory
 --
@@ -204,7 +205,7 @@ BEGIN
         hop_depth, source_version
     ) VALUES (
         p_agent_id, p_memory_key, p_new_content,
-        COALESCE(p_source_agent_id, p_agent_id), p_source_reference,
+        COALESCE(v_old.source_agent_id, p_agent_id), p_source_reference,
         v_old.version + 1, 'active', v_vector, v_observed,
         COALESCE(p_subject_key, v_old.subject_key), p_valid_until,
         v_old.hop_depth, v_old.version
@@ -237,11 +238,13 @@ CREATE OR REPLACE FUNCTION share_memory_atomic(
 LANGUAGE plpgsql
 AS $fn$
 DECLARE
-    v_source   agent_memories%ROWTYPE;
-    v_copy     agent_memories%ROWTYPE;
-    v_key      text;
-    v_allowed  boolean;
-    v_max_hops integer;
+    v_source       agent_memories%ROWTYPE;
+    v_copy         agent_memories%ROWTYPE;
+    v_existing     agent_memories%ROWTYPE;
+    v_key          text;
+    v_allowed      boolean;
+    v_max_hops     integer;
+    v_next_version integer;
 BEGIN
     IF p_source_memory_id IS NULL THEN
         RAISE EXCEPTION 'source_memory_id is required' USING ERRCODE = 'P0002';
@@ -295,17 +298,56 @@ BEGIN
 
     PERFORM pg_advisory_xact_lock(hashtextextended(p_target_agent_id || '::' || v_key, 0));
 
-    -- Sharing the same source under the same key twice is a no-op.
-    SELECT * INTO v_copy
+    -- The key may already hold an active row: either the very copy we are
+    -- about to return (same source version), a copy of an *older* version of
+    -- the same source (the source was updated after it was shared), or an
+    -- unrelated memory that happens to use the same key.
+    SELECT * INTO v_existing
       FROM agent_memories
      WHERE agent_id = p_target_agent_id
        AND memory_key = v_key
        AND status = 'active'
-       AND source_reference = v_source.id::text;
+     FOR UPDATE;
 
     IF FOUND THEN
-        RETURN NEXT v_copy;
-        RETURN;
+        -- Sharing the same source version twice is a no-op.
+        IF v_existing.source_reference = v_source.id::text THEN
+            RETURN NEXT v_existing;
+            RETURN;
+        END IF;
+
+        -- Refreshing a copy after its source was superseded is allowed.
+        -- Every version of the copy chain carries a derived_from edge to the
+        -- source chain it came from; an unrelated row has no such edge.
+        IF NOT EXISTS (
+            SELECT 1
+              FROM memory_provenance pr
+              JOIN agent_memories child  ON child.id = pr.memory_id
+              JOIN agent_memories parent ON parent.id = pr.parent_memory_id
+             WHERE pr.relationship = 'derived_from'
+               AND child.agent_id = p_target_agent_id
+               AND child.memory_key = v_key
+               AND parent.agent_id = v_source.agent_id
+               AND parent.memory_key = v_source.memory_key
+        ) THEN
+            RAISE EXCEPTION
+                'key "%" on agent "%" already holds an unrelated memory',
+                v_key, p_target_agent_id USING ERRCODE = 'MEM04';
+        END IF;
+    END IF;
+
+    -- The copy has its own version chain, independent of the source chain.
+    SELECT COALESCE(max(version), 0) INTO v_next_version
+      FROM agent_memories
+     WHERE agent_id = p_target_agent_id
+       AND memory_key = v_key;
+    v_next_version := v_next_version + 1;
+
+    IF v_existing.id IS NOT NULL THEN
+        UPDATE agent_memories
+           SET status = 'superseded',
+               superseded_at = now()
+         WHERE id = v_existing.id;
     END IF;
 
     INSERT INTO agent_memories (
@@ -314,10 +356,19 @@ BEGIN
         hop_depth, source_version
     ) VALUES (
         p_target_agent_id, v_key, v_source.content, v_source.agent_id,
-        v_source.id::text, 1, 'active', v_source.embedding, v_source.observed_at,
-        v_source.subject_key, v_source.valid_until, v_source.hop_depth + 1,
-        v_source.version
+        v_source.id::text, v_next_version, 'active', v_source.embedding,
+        v_source.observed_at, v_source.subject_key, v_source.valid_until,
+        v_source.hop_depth + 1, v_source.version
     ) RETURNING * INTO v_copy;
+
+    IF v_existing.id IS NOT NULL THEN
+        INSERT INTO memory_provenance (
+            memory_id, parent_memory_id, from_agent_id, to_agent_id, relationship, note
+        ) VALUES (
+            v_copy.id, v_existing.id, p_target_agent_id, p_target_agent_id,
+            'supersedes', 'shared copy refreshed after the source changed'
+        );
+    END IF;
 
     INSERT INTO memory_provenance (
         memory_id, parent_memory_id, from_agent_id, to_agent_id, relationship, note
@@ -503,6 +554,7 @@ DECLARE
     v_target_agent text := '__selftest_target__';
     v_v1       uuid;
     v_v2       uuid;
+    v_v3       uuid;
     v_v2_again uuid;
     v_copy     uuid;
     v_version  integer;
@@ -553,19 +605,20 @@ BEGIN
 
     -- 6. explicit supersession also works
     PERFORM supersede_memory_atomic(v_source_agent, 'selftest_key', 'third content');
-    IF NOT EXISTS (
-        SELECT 1 FROM agent_memories
-         WHERE agent_id = v_source_agent AND memory_key = 'selftest_key'
-           AND content = 'third content' AND status = 'active' AND version = 3
-    ) THEN
+    SELECT id INTO v_v3
+      FROM agent_memories
+     WHERE agent_id = v_source_agent AND memory_key = 'selftest_key'
+       AND content = 'third content' AND status = 'active' AND version = 3;
+    IF v_v3 IS NULL THEN
         RAISE EXCEPTION 'selftest: supersede_memory_atomic did not create version 3';
     END IF;
 
-    -- 7. sharing writes the copy and its provenance edge
-    SELECT id INTO v_copy FROM share_memory_atomic(v_v2, v_target_agent);
+    -- 7. sharing writes the copy and its provenance edge. Use the *active*
+    --    version (v_v3); v_v2 was superseded in step 6 and cannot be shared.
+    SELECT id INTO v_copy FROM share_memory_atomic(v_v3, v_target_agent);
     IF NOT EXISTS (
         SELECT 1 FROM memory_provenance
-         WHERE memory_id = v_copy AND parent_memory_id = v_v2
+         WHERE memory_id = v_copy AND parent_memory_id = v_v3
            AND relationship = 'derived_from'
     ) THEN
         RAISE EXCEPTION 'selftest: derived_from edge is missing';
@@ -576,15 +629,16 @@ BEGIN
         SELECT 1 FROM agent_memories
          WHERE id = v_copy AND agent_id = v_target_agent
            AND status = 'active' AND hop_depth = 1
+           AND source_reference = v_v3::text AND source_version = 3
     ) THEN
         RAISE EXCEPTION 'selftest: shared copy is not correct';
     END IF;
 
-    -- 9. sharing the same source twice does not duplicate the copy
-    PERFORM share_memory_atomic(v_v2, v_target_agent);
+    -- 9. sharing the same source version twice does not duplicate the copy
+    PERFORM share_memory_atomic(v_v3, v_target_agent);
     SELECT count(*) INTO v_rows
       FROM agent_memories
-     WHERE agent_id = v_target_agent AND source_reference = v_v2.id::text;
+     WHERE agent_id = v_target_agent AND source_reference = v_v3::text;
     IF v_rows <> 1 THEN
         RAISE EXCEPTION 'selftest: sharing is not idempotent (% copies)', v_rows;
     END IF;
@@ -596,7 +650,7 @@ BEGIN
     END IF;
 
     -- 11. the descendants are reachable as well
-    SELECT count(*) INTO v_rows FROM get_descendants(v_v2);
+    SELECT count(*) INTO v_rows FROM get_descendants(v_v3);
     IF v_rows < 2 THEN
         RAISE EXCEPTION 'selftest: descendants are missing (% rows)', v_rows;
     END IF;
@@ -609,13 +663,56 @@ BEGIN
         WHEN SQLSTATE 'MEM02' THEN NULL;
     END;
 
-    -- 13. self sharing is denied
+    -- 13. self sharing is denied (v_v3 is the active version owned by source)
     BEGIN
-        PERFORM share_memory_atomic(v_v2, v_source_agent);
+        PERFORM share_memory_atomic(v_v3, v_source_agent);
         RAISE EXCEPTION 'selftest: an agent shared a memory with itself';
     EXCEPTION
         WHEN SQLSTATE 'MEM05' THEN NULL;
     END;
+
+    -- 14. re-sharing after the source changed versions the existing copy
+    --     instead of colliding with the one-active-key index.
+    PERFORM supersede_memory_atomic(v_source_agent, 'selftest_key', 'fourth content');
+    SELECT id INTO v_v3
+      FROM agent_memories
+     WHERE agent_id = v_source_agent AND memory_key = 'selftest_key'
+       AND status = 'active' AND version = 4;
+    IF v_v3 IS NULL THEN
+        RAISE EXCEPTION 'selftest: source version 4 was not created';
+    END IF;
+
+    SELECT id INTO v_copy FROM share_memory_atomic(v_v3, v_target_agent);
+    IF NOT EXISTS (
+        SELECT 1 FROM agent_memories
+         WHERE id = v_copy
+           AND agent_id = v_target_agent
+           AND memory_key = 'shared_selftest_key'
+           AND status = 'active'
+           AND version = 2
+           AND source_version = 4
+           AND source_reference = v_v3::text
+    ) THEN
+        RAISE EXCEPTION 'selftest: re-sharing an updated source did not version the copy';
+    END IF;
+
+    SELECT count(*) INTO v_rows
+      FROM agent_memories
+     WHERE agent_id = v_target_agent
+       AND memory_key = 'shared_selftest_key'
+       AND status = 'active';
+    IF v_rows <> 1 THEN
+        RAISE EXCEPTION 'selftest: expected one active shared copy, found %', v_rows;
+    END IF;
+
+    SELECT count(*) INTO v_rows
+      FROM agent_memories
+     WHERE agent_id = v_target_agent
+       AND memory_key = 'shared_selftest_key'
+       AND status = 'superseded';
+    IF v_rows <> 1 THEN
+        RAISE EXCEPTION 'selftest: the previous copy was not superseded (% rows)', v_rows;
+    END IF;
 
     RAISE NOTICE 'memory function self-test passed';
 

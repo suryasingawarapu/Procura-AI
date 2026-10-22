@@ -142,6 +142,7 @@ def test_get_descendants_calls_the_descendants_function() -> None:
         ("MEM01", errors.AgentNotRegistered),
         ("MEM02", errors.ShareNotAllowed),
         ("MEM03", errors.HopLimitExceeded),
+        ("MEM04", errors.DuplicateMemory),
         ("MEM05", errors.SelfShareNotAllowed),
         ("23505", errors.DuplicateMemory),
         ("23514", errors.ConstraintViolation),

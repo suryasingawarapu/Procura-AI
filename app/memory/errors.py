@@ -43,7 +43,7 @@ class SelfShareNotAllowed(MemoryError):
 
 
 class DuplicateMemory(MemoryError):
-    """A uniqueness constraint rejected the write."""
+    """A key conflict or a uniqueness constraint rejected the write."""
 
 
 class ConstraintViolation(MemoryError):
