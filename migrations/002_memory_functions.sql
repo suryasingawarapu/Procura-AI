@@ -716,13 +716,55 @@ BEGIN
 
     RAISE NOTICE 'memory function self-test passed';
 
-    -- clean up after ourselves
-    DELETE FROM agent_memories WHERE agent_id IN (v_source_agent, v_target_agent);
-    DELETE FROM memory_agents WHERE agent_id IN (v_source_agent, v_target_agent);
+    -- clean up after ourselves. Provenance goes first so this works even if
+    -- the foreign keys were created without ON DELETE CASCADE (001 keeps a
+    -- constraint that already exists). Every predicate is scoped to the two
+    -- self-test agents, so no other agent's rows can match.
+    DELETE FROM memory_provenance
+     WHERE from_agent_id IN (v_source_agent, v_target_agent)
+        OR to_agent_id IN (v_source_agent, v_target_agent)
+        OR memory_id IN (
+               SELECT id FROM agent_memories
+                WHERE agent_id IN (v_source_agent, v_target_agent))
+        OR parent_memory_id IN (
+               SELECT id FROM agent_memories
+                WHERE agent_id IN (v_source_agent, v_target_agent));
+
+    DELETE FROM agent_memories
+     WHERE agent_id IN (v_source_agent, v_target_agent);
+
+    DELETE FROM memory_share_policy
+     WHERE from_agent_id IN (v_source_agent, v_target_agent)
+        OR to_agent_id IN (v_source_agent, v_target_agent);
+
+    DELETE FROM memory_agents
+     WHERE agent_id IN (v_source_agent, v_target_agent);
 EXCEPTION
     WHEN OTHERS THEN
-        DELETE FROM agent_memories WHERE agent_id IN (v_source_agent, v_target_agent);
-        DELETE FROM memory_agents WHERE agent_id IN (v_source_agent, v_target_agent);
+        BEGIN
+            DELETE FROM memory_provenance
+             WHERE from_agent_id IN (v_source_agent, v_target_agent)
+                OR to_agent_id IN (v_source_agent, v_target_agent)
+                OR memory_id IN (
+                       SELECT id FROM agent_memories
+                        WHERE agent_id IN (v_source_agent, v_target_agent))
+                OR parent_memory_id IN (
+                       SELECT id FROM agent_memories
+                        WHERE agent_id IN (v_source_agent, v_target_agent));
+
+            DELETE FROM agent_memories
+             WHERE agent_id IN (v_source_agent, v_target_agent);
+
+            DELETE FROM memory_share_policy
+             WHERE from_agent_id IN (v_source_agent, v_target_agent)
+                OR to_agent_id IN (v_source_agent, v_target_agent);
+
+            DELETE FROM memory_agents
+             WHERE agent_id IN (v_source_agent, v_target_agent);
+        EXCEPTION
+            WHEN OTHERS THEN
+                NULL;
+        END;
         RAISE;
 END
 $selftest$;
