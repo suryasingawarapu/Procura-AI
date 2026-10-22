@@ -1,0 +1,34 @@
+# Direct runtime dependencies for Provenance-Aware Shared Memory.
+#
+# Versions are pinned to the exact set already installed and verified in the
+# local .venv (Python 3.13). Transitive dependencies are pinned separately in
+# requirements.lock.txt; use that file for a fully reproducible install.
+#
+#   pip install -r requirements.txt
+#
+# LangChain 1.x / LangGraph 1.x are installed. Do not downgrade to 0.x without
+# re-checking the tool and graph APIs, they are not API compatible.
+
+# --- LLM integration -------------------------------------------------------
+langchain==1.4.7
+langchain-core==1.6.13
+langchain-openai==1.7.2
+
+# --- Orchestration ----------------------------------------------------------
+langgraph==1.2.16
+langgraph-checkpoint==4.3.0
+langgraph-prebuilt==1.1.1
+langgraph-sdk==0.4.8
+
+# --- Persistence ------------------------------------------------------------
+supabase==2.33.0
+
+# --- Memory service ---------------------------------------------------------
+fastapi==0.159.1
+uvicorn==0.54.0
+
+# --- Configuration ----------------------------------------------------------
+python-dotenv==1.2.4
+
+# --- Core types -------------------------------------------------------------
+pydantic==2.14.1
