@@ -45,9 +45,12 @@ Create a local `.env` (never committed, see `.gitignore`) containing:
 | `SUPABASE_URL` | Supabase project URL |
 | `SUPABASE_KEY` | Supabase API key |
 | `MEMORY_ALLOW_WRITE` | Optional. Set to `1` to let the legacy scripts write. |
+| `MEMORY_API_TOKEN` | Required for FastAPI endpoints. If unset, API auth is fail-closed (503). |
+| `OPENAI_API_KEY` | Required for embedding generation (M3/M5). |
+| `LANGFUSE_PUBLIC_KEY` | Optional. For observability tracing (M6). |
+| `LANGFUSE_SECRET_KEY` | Optional. For observability tracing (M6). |
 
-No other variable is required yet. An `OPENAI_API_KEY` and Langfuse keys are
-required before the LLM-dependent milestones (M5/M6).
+See `.env.example` for placeholders. No other variable is required yet.
 
 ## Running the tests
 
@@ -119,9 +122,10 @@ Sharing is policy controlled: a pair that is not listed in
 
 * The configured Supabase project is shared and long-lived; treat every write
   as a production write.
-* The key in `.env` is a secret/service-role key, so database-level row
-  security is not enforced. Agent isolation is currently application-level
-  only. Closing this gap is tracked in M7.
+* The key in `.env` is a secret/service-role key, so **database-level row
+  security (RLS) is not enforced**. Agent isolation is currently **application/API-level
+  only** (FastAPI endpoints require `MEMORY_API_TOKEN` when configured). Closing
+  the DB-level authorization gap is tracked in M7.
 * On Windows the console defaults to cp1252 and cannot print characters such
   as `₹`. `app/utils/console.enable_utf8_console()` fixes this; the entry
   points call it automatically.

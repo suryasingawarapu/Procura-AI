@@ -59,8 +59,9 @@ class FakeTableQuery:
 
     # -- terminal --------------------------------------------------------
     def execute(self) -> FakeResponse:
-        if self.client.error is not None:
-            raise self.client.error
+        err = self.client.query_error if self.client.query_error is not None else self.client.error
+        if err is not None:
+            raise err
         return FakeResponse(self.client.rows, self.client.count)
 
     # -- helpers for assertions ------------------------------------------
@@ -80,10 +81,14 @@ class FakeClient:
         rows: Optional[List[Dict[str, Any]]] = None,
         count: Optional[int] = None,
         error: Optional[Exception] = None,
+        rpc_error: Optional[Exception] = None,
+        query_error: Optional[Exception] = None,
     ):
         self.rows = rows if rows is not None else []
         self.count = count
         self.error = error
+        self.rpc_error = rpc_error
+        self.query_error = query_error
         self.rpc_calls: List[Dict[str, Any]] = []
         self.queries: List[FakeTableQuery] = []
 
@@ -94,8 +99,9 @@ class FakeClient:
 
         class _Builder:
             def execute(self) -> FakeResponse:
-                if client.error is not None:
-                    raise client.error
+                err = client.rpc_error if client.rpc_error is not None else client.error
+                if err is not None:
+                    raise err
                 return FakeResponse(client.rows, client.count)
 
         return _Builder()
