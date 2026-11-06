@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import Any, List, Protocol
 
 
-__all__ = ["Embedder", "get_default_embedder", "cosine_similarity"]
+__all__ = ["Embedder", "get_default_embedder", "embed_or_none", "cosine_similarity"]
 
 
 class Embedder(Protocol):
@@ -38,6 +38,27 @@ def get_default_embedder() -> Embedder | None:
         
         _default_embedder = OpenAIEmbeddings()
         return _default_embedder
+    except Exception:
+        return None
+
+
+def embed_or_none(text: str) -> List[float] | None:
+    """Best-effort embedding for ``text``, for callers that want one without
+    taking on the embedder's failure modes.
+
+    Returns ``None`` -- never raises -- when no embedder is configured (for
+    example no ``OPENAI_API_KEY``) or the call itself fails, so a memory
+    write can always proceed; it just won't be reachable by vector search
+    until it is re-embedded. Intentionally not used by
+    :func:`app.memory.store.save_memory` or
+    :func:`app.memory.versioning.update_memory` themselves, so those stay
+    pure and embedding-free unless a caller opts in explicitly.
+    """
+    embedder = get_default_embedder()
+    if embedder is None:
+        return None
+    try:
+        return embedder.embed_query(text)
     except Exception:
         return None
 

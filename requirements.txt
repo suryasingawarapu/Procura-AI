@@ -13,6 +13,7 @@
 langchain==1.4.7
 langchain-core==1.6.13
 langchain-openai==1.7.2
+langchain-nvidia-ai-endpoints==1.5.0
 
 # --- Orchestration ----------------------------------------------------------
 langgraph==1.2.16
@@ -23,6 +24,10 @@ langgraph-sdk==0.4.8
 # --- Persistence ------------------------------------------------------------
 supabase==2.33.0
 
+# --- ERPNext integration (direct REST client; was already a transitive
+# dependency via supabase/postgrest, now also a direct import) -------------
+requests==2.34.2
+
 # --- Memory service ---------------------------------------------------------
 fastapi==0.159.1
 uvicorn==0.54.0
@@ -32,3 +37,4 @@ python-dotenv==1.2.4
 
 # --- Core types -------------------------------------------------------------
 pydantic==2.14.1
+reportlab>=4.0  # purchase-order PDFs

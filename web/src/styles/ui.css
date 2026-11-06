@@ -1,0 +1,396 @@
+/* Shared primitives: buttons, badges, cards, nav, drawer, skeletons. Pages add their own CSS on top. */
+
+/* ---------- Button ---------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 16px;
+  border-radius: var(--radius-pill);
+  border: 1px solid transparent;
+  font-size: 14px;
+  font-weight: 550;
+  letter-spacing: -0.005em;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.18s var(--ease), border-color 0.18s var(--ease), transform 0.18s var(--ease),
+    box-shadow 0.18s var(--ease), color 0.18s var(--ease);
+}
+.btn:active:not(:disabled) {
+  transform: translateY(1px) scale(0.99);
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.btn svg {
+  flex: none;
+}
+.btn--sm {
+  height: 32px;
+  padding: 0 12px;
+  font-size: 13px;
+}
+.btn--lg {
+  height: 48px;
+  padding: 0 26px;
+  font-size: 15px;
+}
+.btn--icon {
+  width: 38px;
+  padding: 0;
+}
+.btn--icon.btn--sm {
+  width: 32px;
+}
+.btn--primary {
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.18) inset, 0 6px 20px -6px var(--accent-ring);
+}
+.btn--primary:hover:not(:disabled) {
+  background: var(--accent-strong);
+}
+.btn--secondary {
+  background: var(--surface-2);
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+.btn--secondary:hover:not(:disabled) {
+  background: var(--surface-3);
+}
+.btn--ghost {
+  background: transparent;
+  color: var(--text-dim);
+}
+.btn--ghost:hover:not(:disabled) {
+  background: var(--surface-2);
+  color: var(--text);
+}
+.btn--danger {
+  background: var(--danger-soft);
+  border-color: var(--danger);
+  color: var(--danger);
+}
+.btn--danger:hover:not(:disabled) {
+  background: var(--danger);
+  color: #fff;
+}
+.btn--success {
+  background: var(--success);
+  color: #fff;
+}
+.btn--success:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+/* ---------- Badge ---------- */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 22px;
+  padding: 0 9px;
+  border-radius: var(--radius-pill);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-2);
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+.badge--dot::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.badge--accent {
+  color: var(--accent-strong);
+  background: var(--accent-soft);
+  border-color: transparent;
+}
+.badge--success {
+  color: var(--success);
+  background: var(--success-soft);
+  border-color: transparent;
+}
+.badge--warning {
+  color: var(--warning);
+  background: var(--warning-soft);
+  border-color: transparent;
+}
+.badge--danger {
+  color: var(--danger);
+  background: var(--danger-soft);
+  border-color: transparent;
+}
+.badge--info {
+  color: var(--info);
+  background: var(--info-soft);
+  border-color: transparent;
+}
+
+/* ---------- Card ---------- */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+.card--pad {
+  padding: 20px;
+}
+.card--hover {
+  transition: border-color 0.2s var(--ease), transform 0.2s var(--ease), box-shadow 0.2s var(--ease);
+}
+.card--hover:hover {
+  border-color: var(--border-strong);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+/* ---------- Nav ---------- */
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  height: var(--nav-h);
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid transparent;
+  transition: background 0.25s var(--ease), border-color 0.25s var(--ease), backdrop-filter 0.25s var(--ease);
+}
+.nav--solid,
+.nav--scrolled {
+  background: var(--glass);
+  backdrop-filter: saturate(180%) blur(14px);
+  -webkit-backdrop-filter: saturate(180%) blur(14px);
+  border-bottom-color: var(--border);
+}
+.nav__inner {
+  width: 100%;
+  max-width: var(--content-w);
+  margin: 0 auto;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  gap: 28px;
+}
+.nav--app .nav__inner {
+  max-width: none;
+  padding: 0 20px;
+}
+.nav__links {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+}
+.nav__link {
+  position: relative;
+  padding: 8px 12px;
+  border-radius: var(--radius-pill);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-dim);
+  transition: color 0.18s var(--ease), background 0.18s var(--ease);
+}
+.nav__link:hover {
+  color: var(--text);
+  background: var(--surface-2);
+}
+.nav__link--active {
+  color: var(--text);
+  background: var(--surface-2);
+}
+.nav__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+@media (max-width: 860px) {
+  .nav__links .nav__link--hide-sm {
+    display: none;
+  }
+}
+@media (max-width: 720px) {
+  .nav__inner {
+    gap: 12px;
+    padding: 0 14px;
+  }
+  .logo > span:last-child {
+    max-width: 44vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .nav__links {
+    gap: 0;
+    min-width: 0;
+    overflow: hidden;
+  }
+  .nav__link {
+    padding: 8px 8px;
+    font-size: 13px;
+  }
+  .nav__actions .btn--primary {
+    display: none;
+  }
+}
+@media (max-width: 520px) {
+  .logo > span:last-child {
+    display: none;
+  }
+}
+
+/* ---------- Logo ---------- */
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  font-size: 15.5px;
+}
+.logo__mark {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: linear-gradient(135deg, #7b8bff, #5262f0 55%, #3d4ad0);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.3) inset, 0 6px 16px -4px var(--accent-ring);
+}
+.logo__sub {
+  color: var(--text-faint);
+  font-weight: 500;
+}
+
+/* ---------- Drawer ---------- */
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: rgba(3, 5, 10, 0.55);
+  backdrop-filter: blur(3px);
+}
+.drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 81;
+  width: min(560px, 100vw);
+  background: var(--bg-elev);
+  border-left: 1px solid var(--border-strong);
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+}
+.drawer__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.drawer__title {
+  font-size: 16px;
+  font-weight: 650;
+}
+.drawer__body {
+  flex: 1;
+  overflow: auto;
+  padding: 20px;
+}
+
+/* ---------- Skeleton ---------- */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.06), transparent);
+  animation: shimmer 1.4s infinite;
+}
+@keyframes shimmer {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+/* ---------- Spinner ---------- */
+.spinner {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid var(--border-strong);
+  border-top-color: var(--accent);
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---------- Lane chip (shared by landing graph and chat trace) ---------- */
+.lane {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: var(--radius-pill);
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--lane, var(--text-dim));
+  background: color-mix(in srgb, var(--lane, var(--text-dim)) 14%, transparent);
+}
+.lane-user { --lane: var(--lane-user); }
+.lane-router { --lane: var(--lane-router); }
+.lane-orch { --lane: var(--lane-orch); }
+.lane-agent { --lane: var(--lane-agent); }
+.lane-erp { --lane: var(--lane-erp); }
+.lane-mem { --lane: var(--lane-mem); }
+.lane-vendor { --lane: var(--lane-vendor); }
+
+.status-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--text-faint);
+  box-shadow: 0 0 0 3px transparent;
+}
+.status-dot--ok {
+  background: var(--success);
+  box-shadow: 0 0 0 3px var(--success-soft);
+}
+.status-dot--bad {
+  background: var(--danger);
+  box-shadow: 0 0 0 3px var(--danger-soft);
+}
+
+.kbd {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 5px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-2);
+  font-size: 11px;
+  color: var(--text-dim);
+}

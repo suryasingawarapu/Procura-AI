@@ -1,0 +1,412 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Procurement Coordinator — Multi-Agent Procurement Platform</title>
+<meta name="description" content="One instruction in. A real purchase, handled end to end by Vendra, Procura and Finora — 19 specialist checks against your actual ERPNext data." />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div class="landing">
+
+  <nav class="landing-nav" id="nav">
+    <a href="index.html" class="landing-brand"><span class="mark">&#128722;</span> Procurement Coordinator</a>
+    <div class="landing-nav-links">
+      <a href="#how-it-works">How it works</a>
+      <a href="#workflow">Workflow</a>
+      <a href="#memory">Memory</a>
+      <a href="#agents">Agents</a>
+      <a href="#security">Security</a>
+      <a href="observability.html">Observability</a>
+    </div>
+    <a href="chat.html" class="landing-cta">Chat with Agents &rarr;</a>
+  </nav>
+
+  <section class="landing-hero">
+    <div class="hero-glow"></div>
+    <div class="hero-grid"></div>
+    <span class="landing-eyebrow"><span class="pulse-dot"></span>MULTI-AGENT PROCUREMENT &middot; PERSISTENT, PROVENANCE-TRACKED MEMORY</span>
+    <h1>One instruction in.<br>A real purchase, <span>handled end to end</span>.</h1>
+    <p>
+      Type what you need to buy in plain language. A deterministic coordinator routes it through
+      Vendra, Procura, and Finora — 19 specialist checks in total — against your actual
+      ERPNext data, and comes back with a genuine recommendation, a real quotation
+      comparison, and (in Live mode) a real Purchase Order. Every agent writes what it
+      learns into a versioned, provenance-tracked memory — so a task paused today
+      resumes tomorrow exactly where it stopped, and every decision can be traced back
+      to the record that produced it.
+    </p>
+    <div class="landing-hero-actions">
+      <a href="chat.html" class="landing-cta">Chat with Agents &rarr;</a>
+      <a href="#how-it-works" class="landing-cta ghost">See how it works</a>
+    </div>
+
+    <div class="hero-stat-row">
+      <div class="hero-stat"><div class="hero-stat-num">3</div><div class="hero-stat-label">Orchestrated agents</div></div>
+      <div class="hero-stat-sep"></div>
+      <div class="hero-stat"><div class="hero-stat-num">19</div><div class="hero-stat-label">Specialist sub-agents</div></div>
+      <div class="hero-stat-sep"></div>
+      <div class="hero-stat"><div class="hero-stat-num">448</div><div class="hero-stat-label">Automated tests passing</div></div>
+      <div class="hero-stat-sep"></div>
+      <div class="hero-stat"><div class="hero-stat-num">0</div><div class="hero-stat-label">Memory records overwritten</div></div>
+    </div>
+  </section>
+
+  <section class="landing-section" id="how-it-works">
+    <span class="eyebrow-sm">&sect; 01 &middot; REQUEST LIFECYCLE</span>
+    <h2>From a sentence to a Purchase Order</h2>
+    <p class="section-sub">No forms, no multi-system hand-offs — one conversation, the same deterministic path every time.</p>
+    <div class="steps-row">
+      <div class="step-card reveal">
+        <div class="step-num">01</div>
+        <h3>Describe the purchase</h3>
+        <p>"Purchase 10 laptops, 16GB RAM, within &#8377;6,00,000, delivered to Mumbai within 20 days." Plain language, parsed deterministically.</p>
+      </div>
+      <div class="step-card reveal">
+        <div class="step-num">02</div>
+        <h3>Vendra checks eligibility</h3>
+        <p>Vendor discovery, document verification and risk flagging run first — nothing downstream sees a non-compliant supplier.</p>
+      </div>
+      <div class="step-card reveal">
+        <div class="step-num">03</div>
+        <h3>Procura &amp; Finora validate</h3>
+        <p>Real quotations are compared and ranked; the recommended total is checked against real budget and approval-limit policy.</p>
+      </div>
+      <div class="step-card reveal">
+        <div class="step-num">04</div>
+        <h3>Approve &amp; submit</h3>
+        <p>A human approves (or a configured policy auto-approves), and a real Purchase Order is created in ERPNext — never fabricated.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="landing-section landing-section-wide" id="workflow">
+    <span class="eyebrow-sm">&sect; 02 &middot; END-TO-END TRACE</span>
+    <h2>One request, followed across two sessions</h2>
+    <p class="section-sub">An annotated trace of a single purchase request: the first message, a pause for missing information, a vendor-side update in ERPNext, and the resumed run through to a Purchase Order. The memory keys, states and transitions are the ones the system actually uses; IDs, names and amounts are illustrative.</p>
+
+    <div class="trace-legend">
+      <span class="lane lane-user">Requester</span>
+      <span class="lane lane-router">Router</span>
+      <span class="lane lane-orch">Orchestrator</span>
+      <span class="lane lane-agent">Agent</span>
+      <span class="lane lane-erp">ERPNext</span>
+      <span class="lane lane-mem">Memory</span>
+      <span class="lane lane-vendor">Vendor</span>
+    </div>
+
+    <div class="flow-toolbar">
+      <button type="button" class="flow-btn primary" id="flowPlay">&#9654; Play trace</button>
+      <button type="button" class="flow-btn" id="flowPrev" aria-label="Previous step">&#8592; Prev</button>
+      <button type="button" class="flow-btn" id="flowNext" aria-label="Next step">Next &#8594;</button>
+      <button type="button" class="flow-btn" id="flowRestart">&#8634; Restart</button>
+      <span class="flow-progress" id="flowProgress"></span>
+    </div>
+    <div class="flow-viewport" id="flowViewport">
+      <div class="flow-scale" id="flowScale"><div class="flow-canvas" id="flowCanvas"></div></div>
+    </div>
+    <div class="flow-detail" id="flowDetail" aria-live="polite"></div>
+    <noscript><p class="hint">The interactive workflow needs JavaScript.</p></noscript>
+    <p class="figure-caption"><strong>Figure 1.</strong> One request traced across two sessions, as a node graph. Solid edges are control flow; dashed edges are data read from or written to memory and ERPNext. Click any node, or press Play to step through. Nothing in Session 2 depends on the browser tab, process or server instance that handled Session 1; the only shared state is persistent memory and ERPNext.</p>
+  </section>
+
+  <section class="landing-section" id="memory">
+    <span class="eyebrow-sm">&sect; 03 &middot; PERSISTENT MEMORY</span>
+    <h2>Memory that outlives the conversation</h2>
+    <p class="section-sub">Each agent owns a memory space in Postgres (Supabase with pgvector). Writes are atomic and versioned, every change carries its provenance, and nothing is ever overwritten in place.</p>
+
+    <div class="memory-layout">
+      <div class="memory-props">
+        <div class="memory-prop reveal">
+          <span class="prop-index">01</span>
+          <div>
+            <h4>Scoped per agent</h4>
+            <p>An agent's identity is bound in code, never passed by the model, so Vendra cannot read or write Finora's memory.</p>
+          </div>
+        </div>
+        <div class="memory-prop reveal">
+          <span class="prop-index">02</span>
+          <div>
+            <h4>Atomic versioning</h4>
+            <p>Identical content is a no-op. Changed content supersedes the active version and creates the next one in a single transaction.</p>
+          </div>
+        </div>
+        <div class="memory-prop reveal">
+          <span class="prop-index">03</span>
+          <div>
+            <h4>Provenance graph</h4>
+            <p><em>supersedes</em> and <em>derived_from</em> edges record where every fact came from, with ancestry and descendant queries.</p>
+          </div>
+        </div>
+        <div class="memory-prop reveal">
+          <span class="prop-index">04</span>
+          <div>
+            <h4>Policy-controlled sharing</h4>
+            <p>Who may share with whom lives in the database. A pair that isn't listed is denied, and shared copies are new rows with lineage.</p>
+          </div>
+        </div>
+        <div class="memory-prop reveal">
+          <span class="prop-index">05</span>
+          <div>
+            <h4>Vector search</h4>
+            <p>Memories can carry an embedding and be searched by similarity (pgvector), limited to the agent's own active memories. Embeddings are generated when an embedding provider is configured.</p>
+          </div>
+        </div>
+        <div class="memory-prop reveal">
+          <span class="prop-index">06</span>
+          <div>
+            <h4>Stale detection &amp; document expiry</h4>
+            <p>Superseded, archived and expired memories are left out of an agent's context. A supplier's verdict carries the expiry of the first document behind it, so it goes stale by itself when a GST certificate lapses. A shared copy goes stale when its source, or any ancestor along the sharing path, changes.</p>
+          </div>
+        </div>
+        <div class="memory-prop reveal">
+          <span class="prop-index">07</span>
+          <div>
+            <h4>Summary-first retrieval</h4>
+            <p>Long histories are folded into a summary that records exactly what it covers. Procura reads the summary of an item's quotation history first, then opens the supporting records to see what changed. If something the summary covers changes, it is marked stale and rebuilt, never used.</p>
+          </div>
+        </div>
+        <div class="memory-prop reveal">
+          <span class="prop-index">08</span>
+          <div>
+            <h4>Conflict detection &amp; resolution</h4>
+            <p>Every quotation is a claim with its source and document date. When an email says &#8377;50,000 and an updated PDF says &#8377;53,000, the more authoritative, newer source wins automatically; when that cannot be decided, the task waits and you choose in the chat. The loser is kept, marked disputed.</p>
+          </div>
+        </div>
+        <div class="memory-prop reveal">
+          <span class="prop-index">09</span>
+          <div>
+            <h4>Agents that use the shared memory</h4>
+            <p>The coordinator relays Vendra's verdicts to Procura, which selects suppliers from what it received; Finora refuses to proceed if the evidence it holds is no longer current. Every hand-off is recorded as data.</p>
+          </div>
+        </div>
+      </div>
+
+      <figure class="memory-figure reveal">
+        <div class="code-card">
+          <div class="code-card-head"><span class="code-dot"></span><span class="code-dot"></span><span class="code-dot"></span><span class="code-title">agent_memories &middot; one row</span></div>
+<pre><span class="tk-k">agent_id</span>               <span class="tk-s">"vendra"</span>
+<span class="tk-k">memory_key</span>             <span class="tk-s">"supplier_eligibility:ACME-TECH"</span>
+<span class="tk-k">version</span>                <span class="tk-n">2</span>
+<span class="tk-k">status</span>                 <span class="tk-s">"active"</span>
+<span class="tk-k">content</span>                <span class="tk-s">"ACME Tech (ACME-TECH): compliant"</span>
+<span class="tk-k">source_type</span>            <span class="tk-s">"erpnext_doctype"</span>
+<span class="tk-k">verification_status</span>    <span class="tk-s">"verified"</span>
+<span class="tk-k">task_id</span>                <span class="tk-s">"PR-7F3A"</span>
+<span class="tk-k">sharing_classification</span> <span class="tk-s">"shareable"</span>
+<span class="tk-k">structured_fact</span>        <span class="tk-c">{ supplier, compliance, risk }</span>
+<span class="tk-k">embedding</span>              <span class="tk-c">vector(...)</span></pre>
+        </div>
+        <div class="version-chain">
+          <div class="version-node superseded">
+            <span class="vn-label">v1 &middot; superseded</span>
+            <span class="vn-detail">disputed &middot; missing GST</span>
+          </div>
+          <div class="version-edge"><span>supersedes</span></div>
+          <div class="version-node active">
+            <span class="vn-label">v2 &middot; active</span>
+            <span class="vn-detail">verified &middot; task PR-7F3A</span>
+          </div>
+        </div>
+        <figcaption class="figure-caption"><strong>Figure 2.</strong> A memory row and its version chain. Column names are the real schema; values are illustrative.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="landing-section" id="architecture">
+    <span class="eyebrow-sm">&sect; 04 &middot; ORCHESTRATION</span>
+    <h2>How a request actually flows</h2>
+    <p class="section-sub">The Coordinator runs a fixed LangGraph pipeline — the same three systems, in the same dependency order, every time. No agent ever loops back on another.</p>
+    <div class="pipeline-row">
+      <div class="pipeline-node coordinator">Coordinator</div>
+      <div class="pipeline-arrow"><span class="flow-dot"></span>&rarr;</div>
+      <div class="pipeline-node">Vendra</div>
+      <div class="pipeline-arrow"><span class="flow-dot" style="animation-delay:.5s"></span>&rarr;</div>
+      <div class="pipeline-node">Procura</div>
+      <div class="pipeline-arrow"><span class="flow-dot" style="animation-delay:1s"></span>&rarr;</div>
+      <div class="pipeline-node">Finora</div>
+      <div class="pipeline-arrow"><span class="flow-dot" style="animation-delay:1.5s"></span>&rarr;</div>
+      <div class="pipeline-node accent">Purchase Order</div>
+    </div>
+  </section>
+
+  <section class="landing-section" id="agents">
+    <span class="eyebrow-sm">&sect; 05 &middot; THE AGENTS</span>
+    <h2>3 agents, 19 specialist sub-agents</h2>
+    <p class="section-sub">Each agent is itself a small orchestrator — running its own fixed pipeline of specialists, then handing its result forward.</p>
+    <div class="agent-grid">
+      <div class="agent-card-v2 reveal">
+        <div class="agent-card-top">
+          <span class="agent-icon">&#128269;</span>
+          <span class="agent-count">6 sub-agents</span>
+        </div>
+        <h3>Vendra</h3>
+        <p class="agent-tagline">Vendor discovery &amp; compliance — decides who is even eligible before anything else runs.</p>
+        <div class="chip-list">
+          <span class="chip">vendor_discovery</span>
+          <span class="chip">document_verification</span>
+          <span class="chip">vendor_onboarding_readiness</span>
+          <span class="chip">vendor_profile</span>
+          <span class="chip">vendor_performance_snapshot</span>
+          <span class="chip">vendor_risk_flagging</span>
+        </div>
+      </div>
+      <div class="agent-card-v2 featured reveal">
+        <div class="agent-card-top">
+          <span class="agent-icon">&#128196;</span>
+          <span class="agent-count">6 + 1 gated</span>
+        </div>
+        <h3>Procura</h3>
+        <p class="agent-tagline">RFQs, quotations &amp; negotiation — collects and ranks real quotes from eligible suppliers only.</p>
+        <div class="chip-list">
+          <span class="chip">rfq_management</span>
+          <span class="chip">quotation_processing</span>
+          <span class="chip">quotation_comparison</span>
+          <span class="chip">supplier_matching</span>
+          <span class="chip">delivery_schedule_estimation</span>
+          <span class="chip">quotation_history</span>
+          <span class="chip chip-gated">submit_purchase_order (approval-gated)</span>
+        </div>
+      </div>
+      <div class="agent-card-v2 reveal">
+        <div class="agent-card-top">
+          <span class="agent-icon">&#128202;</span>
+          <span class="agent-count">6 sub-agents</span>
+        </div>
+        <h3>Finora</h3>
+        <p class="agent-tagline">Budget &amp; finance — checks the real numbers before anything is ever recommended for approval.</p>
+        <div class="chip-list">
+          <span class="chip">budget_verification</span>
+          <span class="chip">cost_analysis</span>
+          <span class="chip">invoice_matching</span>
+          <span class="chip">payment_terms_review</span>
+          <span class="chip">approval_routing</span>
+          <span class="chip">financial_records</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="landing-section" id="security">
+    <span class="eyebrow-sm">&sect; 06 &middot; ENTERPRISE-GRADE</span>
+    <h2>What makes it real, not a demo</h2>
+    <p class="section-sub">Every one of these was verified live against a real ERPNext instance, not assumed.</p>
+    <div class="feature-grid">
+      <div class="feature-card reveal">
+        <span class="icon">&#128172;</span>
+        <h4>Conversational, not a form</h4>
+        <p>One message bar. A router decides whether you're asking a question, starting a purchase, or supplying a missing detail.</p>
+      </div>
+      <div class="feature-card reveal">
+        <span class="icon">&#128279;</span>
+        <h4>Real ERPNext, via MCP</h4>
+        <p>Suppliers, items, RFQs, quotations, and Purchase Orders are created through Frappe's own official MCP endpoint — not a mock.</p>
+      </div>
+      <div class="feature-card reveal">
+        <span class="icon">&#9888;</span>
+        <h4>Honest about Live mode</h4>
+        <p>Live mode is always visibly marked and never silently defaults on — a real Purchase Order is one message away, on purpose.</p>
+      </div>
+      <div class="feature-card reveal">
+        <span class="icon">&#128274;</span>
+        <h4>Role-scoped access</h4>
+        <p>Per-agent API tokens can only ever touch their own resources — every read/write is authorized server-side, not just hidden client-side.</p>
+      </div>
+      <div class="feature-card reveal">
+        <span class="icon">&#128203;</span>
+        <h4>Full provenance</h4>
+        <p>Every Purchase Request is a versioned record with a complete audit trail — who changed what, and why, never overwritten.</p>
+      </div>
+      <div class="feature-card reveal">
+        <span class="icon">&#10003;</span>
+        <h4>Never fabricates</h4>
+        <p>When something isn't built yet or data doesn't exist, the agent says so plainly instead of inventing an answer.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="landing-section" id="faq">
+    <span class="eyebrow-sm">&sect; 07 &middot; QUESTIONS</span>
+    <h2>Frequently asked</h2>
+    <div class="faq-list">
+      <details class="faq-item">
+        <summary>Is the chat actually calling real agents, or is it scripted?</summary>
+        <p>Every reply is a real API call. Vendor eligibility, quotation ranking and budget checks are deterministic code — never an LLM guess — and the LLM is used only to route your message and narrate the result in plain language.</p>
+      </details>
+      <details class="faq-item">
+        <summary>What's the difference between demo and live mode?</summary>
+        <p>Demo mode runs against a fully isolated synthetic vendor pool and never touches production storage. Live mode talks to a real ERPNext instance and, if configured, can submit a real Purchase Order — it's always visibly flagged in the chat header.</p>
+      </details>
+      <details class="faq-item">
+        <summary>What happens if my request is missing information?</summary>
+        <p>The agent asks for exactly what's missing (e.g. an item code) and resumes the same task once you reply — nothing is restarted or lost.</p>
+      </details>
+      <details class="faq-item">
+        <summary>What happens to a task if I close the browser or the server restarts?</summary>
+        <p>Nothing is lost. The task lives in persistent memory, not in the browser or the process. A follow-up message later recalls the active version from the database and continues from the state it was in.</p>
+      </details>
+      <details class="faq-item">
+        <summary>Is my conversation stored?</summary>
+        <p>In live mode, yes: each chat turn is stored in persistent memory and periodically summarized, so a long conversation is compressed instead of cut off and survives a restart. Deleting a conversation in the sidebar deletes it from the database too. Demo mode stores nothing.</p>
+      </details>
+      <details class="faq-item">
+        <summary>Who can approve a purchase?</summary>
+        <p>Approval authority is checked against a real role-based limit policy and the agent pipeline's actual recommended cost — never a stale original estimate.</p>
+      </details>
+    </div>
+  </section>
+
+  <section class="landing-footer-cta">
+    <h2>Tell the Coordinator what you need.</h2>
+    <a href="chat.html" class="landing-cta">Chat with Agents &rarr;</a>
+  </section>
+
+  <footer class="landing-footer">
+    <div class="landing-brand"><span class="mark">&#128722;</span> Procurement Coordinator</div>
+    <div class="landing-footer-links">
+      <a href="#how-it-works">How it works</a>
+      <a href="#workflow">Workflow</a>
+      <a href="#memory">Memory</a>
+      <a href="#agents">Agents</a>
+      <a href="#architecture">Architecture</a>
+      <a href="#security">Security</a>
+    </div>
+  </footer>
+
+</div>
+<script src="flow.js"></script>
+<script>
+  window.addEventListener("scroll", () => {
+    document.getElementById("nav").classList.toggle("scrolled", window.scrollY > 8);
+  });
+
+  // Scroll-reveal for cards -- progressive enhancement, see the
+  // .js-reveal-ready CSS guard (content stays visible if this never runs).
+  if ("IntersectionObserver" in window) {
+    document.documentElement.classList.add("js-reveal-ready");
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("in-view");
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.15 }
+    );
+    document.querySelectorAll(".reveal").forEach((el) => observer.observe(el));
+  }
+
+  // A subtle cursor-reactive hero glow -- purely decorative.
+  const hero = document.querySelector(".landing-hero");
+  if (hero) {
+    hero.addEventListener("mousemove", (e) => {
+      const rect = hero.getBoundingClientRect();
+      hero.style.setProperty("--mx", `${((e.clientX - rect.left) / rect.width) * 100}%`);
+    });
+  }
+</script>
+</body>
+</html>

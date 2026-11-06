@@ -10,6 +10,8 @@ project must not run migrations without an explicit approval.
 | `002_memory_functions.sql` | The six atomic SQL functions + a self-test | no |
 | `003_verify_after_apply.sql` | Read-only verification queries | no |
 | `004_fix_parent_memory_id_fkey.sql` | Recreates `memory_provenance.parent_memory_id` with `ON DELETE CASCADE`; apply before `003` | no |
+| `005_restrict_direct_table_access.sql` | Revokes direct table DML for anon/authenticated; SECURITY DEFINER + pinned search_path on the six functions | no |
+| `006_procurement_provenance_fields.sql` | Additive provenance columns for the procurement system (source type/hash, verification, task/message linkage, sharing classification, structured facts) + registers vendra/procura/finora in `memory_agents` | no |
 | `ROLLBACK.sql` | Undoes 001 and 002 | **yes** |
 
 ## How to apply

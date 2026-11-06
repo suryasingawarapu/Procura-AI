@@ -20,8 +20,11 @@ def test_health_no_auth_required():
 
 @patch.dict(os.environ, {}, clear=False)
 def test_summaries_auth_not_configured_fails_closed():
-    # Remove token if exists
-    os.environ.pop("MEMORY_API_TOKEN", None)
+    # Remove every configured token (admin + per-agent scoped, the latter
+    # now a real part of this project's .env) so "not configured" is
+    # genuinely simulated.
+    for key in ("MEMORY_API_TOKEN", "MEMORY_API_TOKEN_VENDRA", "MEMORY_API_TOKEN_PROCURA", "MEMORY_API_TOKEN_FINORA"):
+        os.environ.pop(key, None)
     response = client.get("/agents/researcher/summaries")
     assert response.status_code == 503
 

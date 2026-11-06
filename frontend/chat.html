@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Procurement Coordinator -- Chat</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <a href="index.html" class="agent-avatar-sm" title="Back to overview" style="text-decoration:none">&#128722;</a>
+      <div>
+        <div class="agent-name">Procurement Coordinator</div>
+        <div class="agent-role">Vendra &middot; Procura &middot; Finora</div>
+      </div>
+    </div>
+    <button id="newChatBtn" class="new-chat-btn">+ New chat</button>
+
+    <div class="sidebar-section-label">WORKSPACE</div>
+    <div class="sidebar-nav-item" id="navConnections">
+      <span>&#128279; Connections</span>
+    </div>
+    <div class="sidebar-nav-item" id="navFiles">
+      <span>&#128193; Item codes</span>
+    </div>
+
+    <div class="sidebar-section-label">CONVERSATIONS <span class="count-badge" id="chatCountBadge">0</span></div>
+    <div id="conversationList" class="conversation-list"></div>
+  </aside>
+
+  <div id="sidebarBackdrop" class="sidebar-backdrop"></div>
+
+  <main class="main-panel">
+    <header class="main-topbar">
+      <button id="menuBtn" class="icon-btn menu-btn" type="button" title="Conversations" aria-label="Open conversations">&#9776;</button>
+      <a href="index.html" class="icon-btn" title="Back to overview" aria-label="Back to overview" style="text-decoration:none">&#8592;</a>
+      <div class="topbar-title">Procurement Coordinator</div>
+      <div class="topbar-right">
+        <span class="mode-badge-live">&#9888; LIVE -- real ERPNext, auto-approved</span>
+        <span id="healthDot" class="status-dot" title="Backend status"></span>
+        <a href="observability.html" class="pill-btn" style="text-decoration:none" title="Langfuse tracing and cost">Observability</a>
+        <button id="syncBtn" class="pill-btn" type="button">&#8635; Sync</button>
+        <button id="themeToggleBtn" class="icon-btn" type="button" title="Toggle theme">&#9728;</button>
+      </div>
+    </header>
+
+    <div id="emptyState" class="empty-state">
+      <div class="empty-avatar">&#128722;</div>
+      <div class="empty-role-badge">PROCUREMENT COORDINATOR</div>
+      <h1>Ask the Coordinator anything</h1>
+      <p class="empty-subtitle">Vendors, quotations, budgets &amp; approvals</p>
+      <div class="suggestion-grid">
+        <button type="button" class="suggestion-card" data-prompt="What does Vendra check before approving a supplier?">What does Vendra check before approving a supplier?</button>
+        <button type="button" class="suggestion-card highlight" data-prompt="Purchase 10 laptops with 16 GB RAM and 512 GB SSD, within &#8377;6,00,000, delivered to our Mumbai office within 20 days.">Purchase 10 laptops with 16 GB RAM and 512 GB SSD, within &#8377;6,00,000, delivered to our Mumbai office within 20 days.</button>
+        <button type="button" class="suggestion-card" data-prompt="What's the difference between an RFQ and a Purchase Order?">What's the difference between an RFQ and a Purchase Order?</button>
+        <button type="button" class="suggestion-card highlight" data-prompt="Draft an email to the recommended vendor accepting their quote.">Draft an email to the recommended vendor accepting their quote.</button>
+      </div>
+    </div>
+
+    <div id="chatLog" class="chat-log" style="display:none"></div>
+
+    <div class="composer">
+      <form id="chatForm" class="chat-input-bar">
+        <textarea id="chatInput" rows="1" autocomplete="off" placeholder="Message the agent..."></textarea>
+        <button type="submit" id="sendBtn" class="send-btn" title="Send" aria-label="Send">&#8593;</button>
+      </form>
+      <div class="input-hint">Enter to send &middot; Shift + Enter for a new line</div>
+    </div>
+  </main>
+
+  <section id="connectionsPanel" class="side-panel" hidden>
+    <h2>Connections <button class="close-btn" data-close="connectionsPanel" type="button">&times;</button></h2>
+    <div id="connectionsBody"><p class="hint">Loading...</p></div>
+  </section>
+
+  <section id="filesPanel" class="side-panel" hidden>
+    <h2>Item codes <button class="close-btn" data-close="filesPanel" type="button">&times;</button></h2>
+    <p class="hint">Reference codes seeded into both the demo pool and live ERPNext -- use one of these when the agent asks for an item code.</p>
+    <div id="filesBody"></div>
+  </section>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

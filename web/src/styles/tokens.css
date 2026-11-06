@@ -1,0 +1,122 @@
+/* Design tokens: the single source of colour, type, spacing, radius and elevation for all pages. */
+
+:root,
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg: #090b10;
+  --bg-elev: #0e1118;
+  --surface: #131720;
+  --surface-2: #181d27;
+  --surface-3: #1e2430;
+  --border: #232a37;
+  --border-strong: #2e3747;
+
+  --text: #e8ebf2;
+  --text-dim: #a0a8b8;
+  --text-faint: #6c7589;
+
+  --accent: #6c7cff;
+  --accent-strong: #8392ff;
+  --accent-soft: rgba(108, 124, 255, 0.14);
+  --accent-ring: rgba(108, 124, 255, 0.45);
+  --on-accent: #ffffff;
+
+  --success: #2fbf86;
+  --success-soft: rgba(47, 191, 134, 0.14);
+  --warning: #f2a93b;
+  --warning-soft: rgba(242, 169, 59, 0.14);
+  --danger: #f0585f;
+  --danger-soft: rgba(240, 88, 95, 0.14);
+  --info: #4aa8ff;
+  --info-soft: rgba(74, 168, 255, 0.14);
+
+  /* Flow-graph lanes and chart series */
+  --lane-user: #f2a93b;
+  --lane-router: #4aa8ff;
+  --lane-orch: #a78bfa;
+  --lane-agent: #2fbf86;
+  --lane-erp: #f0787d;
+  --lane-mem: #38c7d9;
+  --lane-vendor: #d885e8;
+
+  --chart-1: #6c7cff;
+  --chart-2: #2fbf86;
+  --chart-3: #f2a93b;
+  --chart-4: #4aa8ff;
+  --chart-5: #d885e8;
+  --chart-grid: rgba(255, 255, 255, 0.06);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.35), 0 1px 0 rgba(255, 255, 255, 0.03) inset;
+  --shadow-lg: 0 24px 64px rgba(0, 0, 0, 0.55);
+  --glow: 0 0 0 1px rgba(108, 124, 255, 0.35), 0 8px 40px rgba(108, 124, 255, 0.18);
+  --glass: rgba(14, 17, 24, 0.72);
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --bg: #f5f6f9;
+  --bg-elev: #ffffff;
+  --surface: #ffffff;
+  --surface-2: #f7f8fb;
+  --surface-3: #eef0f5;
+  --border: #e2e5ec;
+  --border-strong: #d0d5df;
+
+  --text: #0e1320;
+  --text-dim: #4b5468;
+  --text-faint: #7a8397;
+
+  --accent: #4f5df0;
+  --accent-strong: #3a48d8;
+  --accent-soft: rgba(79, 93, 240, 0.1);
+  --accent-ring: rgba(79, 93, 240, 0.4);
+  --on-accent: #ffffff;
+
+  --success: #12935f;
+  --success-soft: rgba(18, 147, 95, 0.1);
+  --warning: #b9720a;
+  --warning-soft: rgba(185, 114, 10, 0.1);
+  --danger: #d23a43;
+  --danger-soft: rgba(210, 58, 67, 0.1);
+  --info: #1d78d8;
+  --info-soft: rgba(29, 120, 216, 0.1);
+
+  --lane-user: #b9720a;
+  --lane-router: #1d78d8;
+  --lane-orch: #7c5ce0;
+  --lane-agent: #12935f;
+  --lane-erp: #d2474f;
+  --lane-mem: #0e93a6;
+  --lane-vendor: #a940c0;
+
+  --chart-1: #4f5df0;
+  --chart-2: #12935f;
+  --chart-3: #b9720a;
+  --chart-4: #1d78d8;
+  --chart-5: #a940c0;
+  --chart-grid: rgba(14, 19, 32, 0.07);
+
+  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06);
+  --shadow-md: 0 8px 24px rgba(16, 24, 40, 0.08), 0 1px 2px rgba(16, 24, 40, 0.04);
+  --shadow-lg: 0 24px 64px rgba(16, 24, 40, 0.16);
+  --glow: 0 0 0 1px rgba(79, 93, 240, 0.3), 0 8px 32px rgba(79, 93, 240, 0.14);
+  --glass: rgba(255, 255, 255, 0.78);
+}
+
+:root {
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono Variable", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 22px;
+  --radius-pill: 999px;
+
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --nav-h: 64px;
+  --content-w: 1200px;
+}

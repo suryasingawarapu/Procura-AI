@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Observability — Procurement Coordinator</title>
+<link rel="stylesheet" href="style.css" />
+<style>
+  body { overflow: auto; }
+  .obs { max-width: 1200px; margin: 0 auto; padding: 1.2rem 16px 3rem; }
+  .obs-top { display: flex; align-items: center; gap: .8rem; flex-wrap: wrap; margin-bottom: 1.2rem; }
+  .obs-top h1 { font-size: 1.25rem; margin: 0; flex: 1 1 auto; }
+  .obs-top a.back { color: var(--fg-dim); text-decoration: none; font-size: 1.2rem; }
+  .obs select, .obs button, .obs a.ext {
+    background: var(--card); color: var(--fg); border: 1px solid var(--border); border-radius: 999px;
+    padding: .4rem .9rem; font-size: .85rem; cursor: pointer; text-decoration: none;
+  }
+  .obs button:hover, .obs a.ext:hover { background: var(--card-hover); }
+  .conn { display: flex; align-items: center; gap: .5rem; font-size: .8rem; color: var(--fg-dim); margin-bottom: 1rem; flex-wrap: wrap; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--fg-dim); display: inline-block; }
+  .dot.ok { background: #3FB950; } .dot.bad { background: var(--accent); }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: .8rem; margin-bottom: 1.2rem; }
+  .kpi, .panel { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: .9rem 1rem; }
+  .kpi .l { font-size: .72rem; color: var(--fg-dim); text-transform: uppercase; letter-spacing: .05em; }
+  .kpi .v { font-size: 1.5rem; font-weight: 700; margin-top: .25rem; font-variant-numeric: tabular-nums; }
+  .kpi .v.err { color: var(--accent); }
+  .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: .8rem; margin-bottom: 1.2rem; }
+  .panel h2 { font-size: .9rem; margin: 0 0 .7rem; }
+  .panel .hint { font-size: .75rem; color: var(--fg-dim); margin: -.4rem 0 .7rem; }
+  table { width: 100%; border-collapse: collapse; font-size: .8rem; }
+  th, td { text-align: left; padding: .4rem .5rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--fg-dim); font-weight: 600; font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; }
+  td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
+  .scroll { overflow-x: auto; }
+  .bar { height: 8px; border-radius: 4px; background: var(--accent); min-width: 2px; }
+  .barrow { display: grid; grid-template-columns: minmax(90px, 190px) 1fr 70px; gap: .6rem; align-items: center; font-size: .75rem; padding: .15rem 0; }
+  .barrow .lbl { color: var(--fg-dim); }
+  .barrow .val { text-align: right; font-variant-numeric: tabular-nums; }
+  .tabs { display: flex; gap: .4rem; margin-bottom: .7rem; }
+  .tabs button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .lvl { font-size: .7rem; padding: .1rem .45rem; border-radius: 999px; border: 1px solid var(--border); color: var(--fg-dim); }
+  .lvl.ERROR { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); }
+  .lvl.WARNING { color: #D29922; border-color: #D29922; }
+  .msg { color: var(--fg-dim); font-size: .85rem; padding: .6rem 0; }
+  .banner { background: var(--accent-dim); border: 1px solid var(--accent); border-radius: 10px; padding: .7rem 1rem; margin-bottom: 1rem; font-size: .85rem; }
+  .note { font-size: .75rem; color: var(--fg-dim); margin-top: 1rem; line-height: 1.5; }
+  .trunc { max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+</style>
+</head>
+<body>
+<div class="obs">
+  <div class="obs-top">
+    <a class="back" href="index.html" title="Back to overview" aria-label="Back to overview">&#8592;</a>
+    <h1>Observability &middot; Langfuse</h1>
+    <select id="days" aria-label="Time range">
+      <option value="1">Last 24 hours</option>
+      <option value="7" selected>Last 7 days</option>
+      <option value="30">Last 30 days</option>
+      <option value="90">Last 90 days</option>
+    </select>
+    <button id="refresh" type="button">&#8635; Refresh</button>
+    <a class="ext" id="openLf" href="https://cloud.langfuse.com" target="_blank" rel="noopener">Open Langfuse &#8599;</a>
+    <a class="ext" href="chat.html">Chat</a>
+  </div>
+
+  <div class="conn" id="conn"><span class="dot"></span> Checking connection&hellip;</div>
+  <div id="banner"></div>
+
+  <div class="kpis" id="kpis"></div>
+
+  <div class="grid2">
+    <div class="panel"><h2>Cost by agent / step</h2>
+      <div class="hint">Cost is attributed by the part of the name before " - ".</div>
+      <div id="agents"></div></div>
+    <div class="panel"><h2>Activity per day</h2><div id="daily"></div></div>
+  </div>
+
+  <div class="panel" style="margin-bottom:1.2rem"><h2>Steps</h2>
+    <div class="scroll"><table id="steps"></table></div></div>
+
+  <div class="grid2">
+    <div class="panel"><h2>Users</h2><div class="scroll"><table id="users"></table></div></div>
+    <div class="panel"><h2>Observation types</h2><div class="scroll"><table id="types"></table></div></div>
+  </div>
+
+  <div class="panel"><h2>Recent activity</h2>
+    <div class="tabs" id="tabs">
+      <button type="button" data-kind="traces" class="on">Traces</button>
+      <button type="button" data-kind="sessions">Sessions</button>
+      <button type="button" data-kind="generations">Model calls</button>
+      <button type="button" data-kind="errors">Errors &amp; warnings</button>
+    </div>
+    <div class="scroll"><table id="recent"></table></div>
+  </div>
+
+  <p class="note" id="note"></p>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const THEME_KEY = "procurement_theme";
+try { document.documentElement.setAttribute("data-theme", localStorage.getItem(THEME_KEY) || "dark"); } catch (e) {}
+
+const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const usd = (n) => "$" + (n || 0).toFixed(!n ? 2 : n < 0.01 ? 7 : n < 1 ? 4 : 2);  // tiny per-call costs must not round away
+const num = (n) => (n || 0).toLocaleString();
+const sec = (n) => (n == null ? "—" : n < 1 ? Math.round(n * 1000) + " ms" : n.toFixed(2) + " s");
+
+async function api(path) {
+  const r = await fetch(path);
+  let body = {};
+  try { body = await r.json(); } catch (e) {}
+  if (!r.ok) throw new Error(body.detail || "HTTP " + r.status);
+  return body;
+}
+
+function bars(rows, valueKey, fmt) {
+  const max = Math.max(...rows.map((r) => r[valueKey] || 0), 0);
+  if (!rows.length) return '<div class="msg">No data in this range yet.</div>';
+  return rows.map((r) => `<div class="barrow"><span class="lbl" title="${esc(r.label)}">${esc(r.label)}</span>
+    <div><div class="bar" style="width:${max ? Math.max(2, (r[valueKey] / max) * 100) : 2}%"></div></div>
+    <span class="val">${fmt(r[valueKey])}</span></div>`).join("");
+}
+
+function table(el, head, rows, empty) {
+  el.innerHTML = rows.length
+    ? "<thead><tr>" + head.map((h) => `<th class="${h[1] ? "n" : ""}">${esc(h[0])}</th>`).join("") + "</tr></thead><tbody>" + rows.join("") + "</tbody>"
+    : `<tbody><tr><td class="msg">${esc(empty)}</td></tr></tbody>`;
+}
+
+async function loadStatus() {
+  try {
+    const s = await api("/observability/status");
+    const ok = s.configured && s.enabled && s.reachable;
+    $("conn").innerHTML = `<span class="dot ${ok ? "ok" : "bad"}"></span> ` +
+      (ok ? `Connected to ${esc(s.base_url)}${s.project ? " &middot; project " + esc(s.project) : ""}` : "Not connected") +
+      ` &middot; agent <b>${esc(s.slug)}</b> &middot; env <b>${esc(s.environment)}</b>` +
+      (s.capture_content ? "" : " &middot; content withheld");
+    $("openLf").href = s.base_url;
+    $("banner").innerHTML = ok ? "" : `<div class="banner">${
+      !s.configured ? "Langfuse keys are not set (LANGFUSE_PUBLIC_KEY / LANGFUSE_SECRET_KEY)." :
+      !s.enabled ? "Tracing is switched off (LANGFUSE_ENABLED=0), so new activity is not being recorded." :
+      "Langfuse is not reachable or rejected the keys."}</div>`;
+  } catch (e) {
+    $("conn").innerHTML = `<span class="dot bad"></span> ${esc(e.message)}`;
+  }
+}
+
+async function loadSummary() {
+  const days = $("days").value;
+  $("kpis").innerHTML = '<div class="msg">Loading from Langfuse&hellip;</div>';
+  try {
+    const s = await api("/observability/summary?days=" + days);
+    const t = s.totals;
+    $("kpis").innerHTML = [
+      ["Observations", num(t.observations)], ["Total cost", usd(t.cost)], ["Tokens", num(t.tokens)],
+      ["Avg latency", sec(t.avg_latency_s)], ["Errors", num(t.errors), t.errors ? "err" : ""], ["Warnings", num(t.warnings)],
+    ].map(([l, v, c]) => `<div class="kpi"><div class="l">${l}</div><div class="v ${c || ""}">${v}</div></div>`).join("");
+
+    $("agents").innerHTML = bars(s.agents.map((a) => ({ label: a.name, cost: a.cost, count: a.count })), "cost", usd) +
+      (s.agents.some((a) => a.cost) ? "" : '<div class="msg">Cost is $0 for every step: Langfuse has no price for this model, so only tokens are shown. Add the model\'s price under Langfuse &rarr; Settings &rarr; Models to get costs.</div>');
+    $("daily").innerHTML = bars(s.daily.map((d) => ({ label: d.day, count: d.count })), "count", num);
+
+    table($("steps"), [["Step"], ["Calls", 1], ["Tokens", 1], ["Cost", 1], ["Avg latency", 1]],
+      s.steps.map((r) => `<tr><td>${esc(r.name)}</td><td class="n">${num(r.count)}</td><td class="n">${num(r.tokens)}</td><td class="n">${usd(r.cost)}</td><td class="n">${sec(r.avg_latency_s)}</td></tr>`),
+      "No traced steps in this range. Send a chat message, then refresh.");
+    table($("users"), [["User"], ["Observations", 1], ["Cost", 1]],
+      s.users.map((u) => `<tr><td>${esc(u.user_id)}</td><td class="n">${num(u.count)}</td><td class="n">${usd(u.cost)}</td></tr>`), "No users yet.");
+    table($("types"), [["Type"], ["Count", 1], ["Tokens", 1], ["Cost", 1]],
+      s.types.map((u) => `<tr><td>${esc(u.type)}</td><td class="n">${num(u.count)}</td><td class="n">${num(u.tokens)}</td><td class="n">${usd(u.cost)}</td></tr>`), "No data.");
+    $("note").innerHTML = (s.truncated ? "Showing the most recent 5,000 observations in this range. " : "") + "Data comes from the Langfuse API through this server (the keys never reach the browser). " +
+      "Traces with no user show as (anonymous): the bundled UI has no sign-in, so it sends no user identity (send an X-User-Id header to attribute them).";
+  } catch (e) {
+    $("kpis").innerHTML = `<div class="banner" style="grid-column:1/-1">${esc(e.message)}</div>`;
+  }
+}
+
+let kind = "traces";
+async function loadRecent() {
+  const el = $("recent");
+  try {
+    const r = await api(`/observability/recent?days=${$("days").value}&kind=${kind}`);
+    if (kind === "sessions") {
+      table(el, [["Session"], ["Observations", 1], ["Tokens", 1], ["Cost", 1], ["Avg latency", 1]],
+        r.items.map((i) => `<tr><td>${esc(i.session_id)}</td><td class="n">${num(i.observations)}</td><td class="n">${num(i.tokens)}</td><td class="n">${usd(i.cost)}</td><td class="n">${sec(i.avg_latency_s)}</td></tr>`),
+        "No sessions in this range yet.");
+      return;
+    }
+    const when = (v) => (v ? new Date(v).toLocaleString() : "");
+    table(el, [["Time"], ["Name"], ["Level"], ["User"], ["Session"], ["Latency", 1], ["Tokens", 1], ["Cost", 1], ["Input / output"]],
+      r.items.map((i) => `<tr><td>${esc(when(i.start_time))}</td><td>${esc(i.name)}</td>
+        <td><span class="lvl ${esc(i.level)}">${esc(i.level)}</span></td><td>${esc(i.user_id || "(anonymous)")}</td>
+        <td class="trunc" title="${esc(i.session_id)}">${esc((i.session_id || "").slice(0, 12))}</td>
+        <td class="n">${sec(i.latency_s)}</td><td class="n">${i.tokens ? num(i.tokens) : "—"}</td><td class="n">${usd(i.total_cost)}</td>
+        <td class="trunc" title="${esc((i.status_message || "") + " " + (i.input || "") + " → " + (i.output || ""))}">${esc(i.status_message || i.input || "")}</td></tr>`),
+      kind === "errors" ? "No errors or warnings in this range." : "Nothing recorded in this range yet.");
+  } catch (e) {
+    el.innerHTML = `<tbody><tr><td class="msg">${esc(e.message)}</td></tr></tbody>`;
+  }
+}
+
+$("tabs").addEventListener("click", (ev) => {
+  const b = ev.target.closest("button"); if (!b) return;
+  kind = b.dataset.kind;
+  document.querySelectorAll("#tabs button").forEach((x) => x.classList.toggle("on", x === b));
+  loadRecent();
+});
+// One after another: Langfuse rate-limits bursts of API calls.
+const all = async () => { await loadStatus(); await loadSummary(); await loadRecent(); };
+$("refresh").addEventListener("click", all);
+$("days").addEventListener("change", all);
+all();
+</script>
+</body>
+</html>
